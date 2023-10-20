@@ -168,7 +168,6 @@ class DOUHook(BaseHook):
                 "script", id="_br_com_seatecnologia_in_buscadou_BuscaDouPortlet_params"
             )
 
-            # teste = soup.find("button", id="rightArrow")
             qtd_total_registros = soup.find("p", {"class": "search-total-label"}).contents[0].getText().split(' ')[-4]
             if qtd_total_registros.isnumeric():
                 qtd_total_registros = int(qtd_total_registros)
@@ -177,7 +176,6 @@ class DOUHook(BaseHook):
 
 
             if search_results:
-                # score = search_results[0]['score']
                 id = search_results[0]['classPK']
                 displayDate = search_results[0]['displayDateSortable']
 
