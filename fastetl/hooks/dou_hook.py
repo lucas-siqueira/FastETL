@@ -152,27 +152,49 @@ class DOUHook(BaseHook):
         for section in sections:
             payload.append(("s", section.value))
 
-        if with_retry:
-            page = self._request_with_retry(payload=payload)
-        else:
-            page = requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
-
-        soup = BeautifulSoup(page.content, "html.parser")
-
-        script_tag = soup.find(
-            "script", id="_br_com_seatecnologia_in_buscadou_BuscaDouPortlet_params"
-        )
-        search_results = json.loads(script_tag.contents[0])["jsonArray"]
+        payload.append(("delta", 75))
+        old_payload = payload.copy()
         all_results = []
-        if search_results:
-            for content in search_results:
-                item = {}
-                item["section"] = content["pubName"].lower()
-                item["title"] = content["title"]
-                item["href"] = self.IN_WEB_BASE_URL + content["urlTitle"]
-                item["abstract"] = content["content"]
-                item["date"] = content["pubDate"]
+        page_num = 1
+        while True:
+            if with_retry:
+                page = self._request_with_retry(payload=payload)
+            else:
+                page = requests.get(self.IN_API_BASE_URL, params=payload, timeout=10)
 
-                all_results.append(item)
+            soup = BeautifulSoup(page.content, "html.parser")
 
+            script_tag = soup.find(
+                "script", id="_br_com_seatecnologia_in_buscadou_BuscaDouPortlet_params"
+            )
+
+            qtd_total_registros = soup.find("p", {"class": "search-total-label"}).contents[0].getText().split(' ')[-4]
+            if qtd_total_registros.isnumeric():
+                qtd_total_registros = int(qtd_total_registros)
+            search_results = json.loads(script_tag.contents[0])["jsonArray"]
+
+
+
+            if search_results:
+                id = search_results[0]['classPK']
+                displayDate = search_results[0]['displayDateSortable']
+
+                for content in search_results:
+                    item = {}
+                    item["section"] = content["pubName"].lower()
+                    item["title"] = content["title"]
+                    item["href"] = self.IN_WEB_BASE_URL + content["urlTitle"]
+                    item["abstract"] = content["content"]
+                    item["date"] = content["pubDate"]
+
+                    all_results.append(item)
+
+            if qtd_total_registros <= len(all_results):
+                return all_results
+            payload = old_payload.copy()
+            payload.append(("currentPage", page_num))
+            payload.append(("displayDate", displayDate))
+            payload.append(("id", id))
+            page_num += 1
+            payload.append(("newPage", page_num))
         return all_results
